@@ -1,0 +1,38 @@
+name: run
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  testing:
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04 ]
+        compiler: [ gcc ]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CC: ${{ matrix.compiler }}
+      BUILDDIR: ${{ matrix.os }}-${{ matrix.compiler }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: update package information
+      run: sudo apt-get -y -o APT::Immediate-Configure=false update
+    - name: install lcov
+      run: sudo apt-get -y -o APT::Immediate-Configure=false install lcov
+    - name: make
+      run: make
+    - name: run
+      run: ./main
+    - name: send converage info
+      env:
+        CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+      run: |
+        lcov -c -b . -d . -o coverage.info
+        bash <(curl -s https://codecov.io/bash) -f ./coverage.info -Z -X gcov -X coveragepy -X search -X xcode -X gcovout
+        
